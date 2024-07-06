@@ -17,7 +17,7 @@
     "@vueuse/core": "^10.1.2",
     "@vueuse/math": "^10.1.2",
     "apexcharts-clevision": "^3.28.5",
-    "axios": "1.4.0",
+    "axios": "^1.4.0",
     "axios-mock-adapter": "^1.21.4",
     "bootstrap": "^5.3.2",
     "bootstrap-vue": "^2.23.1",
