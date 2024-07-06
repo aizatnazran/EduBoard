@@ -190,7 +190,7 @@ onMounted(async () => {
         >
           <div class="announcement-content">
             <!-- Use optional chaining to safely access nested properties -->
-            <h3>{{ announcement.teacher?.name }}</h3>
+            <h3>{{ announcement.announcement_title || 'No title' }}</h3>
             <p>{{ truncate(announcement.announcement_desc, 100) }}</p>
             <p class="timestamp">{{ announcement.teacher?.name }}, {{ new Date(announcement.created_at).toLocaleString() }}</p>
           </div>
