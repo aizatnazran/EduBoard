@@ -105,13 +105,13 @@ const upgradeBanner = computed(() => {
           to: '/students',
         }"
       />
-      <VerticalNavLink
+      <!-- <VerticalNavLink
         :item="{
           title: 'Calendar',
           icon: 'mdi-calendar-account',
           to: '/comingsoon2',
         }"
-      />
+      /> -->
       <VerticalNavLink
         :item="{
           title: 'Announcements',
