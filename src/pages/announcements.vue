@@ -1,7 +1,9 @@
 <script setup>
-import Swal from 'sweetalert2'
-import { useTheme } from 'vuetify'
-import { supabase } from '../lib/supaBaseClient.js'
+import loader from '@/shared/components/loader.vue';
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import { useTheme } from 'vuetify';
+import { supabase } from '../lib/supaBaseClient.js';
 
 const truncate = (text, length, suffix = '...') => {
   if (text.length > length) {
@@ -19,13 +21,17 @@ const showAnnouncementDialog = ref(false)
 const selectedAnnouncement = ref({})
 const vuetifyTheme = useTheme()
 const sheet = ref(false)
+const announcementTitle = ref(null);
+let isLoading = ref(false);
 
 const createAnnouncement = async () => {
+  isLoading.value = true;
   try {
     const { error } = await supabase.from('announcement').insert([
       {
         announcement_desc: newAnnouncement.value,
         announcement_teacher: teacherId,
+        announcement_title: announcementTitle.value,
       },
     ])
 
@@ -36,6 +42,7 @@ const createAnnouncement = async () => {
 
     // Reset the form and close the dialog
     newAnnouncement.value = ''
+    announcementTitle.value = ''
     createAnnouncementDialog.value = false
 
     Swal.fire({
@@ -50,6 +57,9 @@ const createAnnouncement = async () => {
       text: `Error creating announcement: ${error.message}`,
       icon: 'error',
     })
+  } finally {
+    isLoading.value = false;
+    await axios.post('http://118.107.204.65:3000/announcement')
   }
 }
 // const props = defineProps({
@@ -63,13 +73,12 @@ const userUUID = localStorage.getItem('uuid')
 const teacherId = localStorage.getItem('teacher_id')
 
 async function fetchAnnouncements() {
+  isLoading.value = true;
   let { data: announcements, error } = await supabase
     .from('announcement')
     .select(
       `
-      id,
-      announcement_desc,
-      created_at,
+      *,
       teacher:announcement_teacher ( name )
     `,
     ) // Assuming you have set up foreign key relation correctly
@@ -77,8 +86,11 @@ async function fetchAnnouncements() {
 
   if (error) {
     console.log('Error fetching announcements:', error)
+    isLoading.value = false;
     return []
   }
+  isLoading.value = false;
+  console.log(isLoading);
   // Process data if necessary, e.g., formatting dates
   console.log(announcements)
   return announcements
@@ -145,6 +157,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <loader v-if="isLoading" />
   <VRow>
     <VSpacer />
     <VBtn
@@ -158,12 +171,12 @@ onMounted(async () => {
     <VContainer>
       <!-- Submitted Document Docs -->
       <VRow>
-        <VChip class="mb-3 mt-6">
-          <p class="text-title ma-5">Announcements</p>
-        </VChip>
-      </VRow>
+          <VChip class="mb-3 mt-6">
+            <p class="text-title ma-5">Announcements</p>
+          </VChip>
+        </VRow>
 
-      <VRow>
+      <VRow class="flex justify-start">
         <VCard
           class="announcement-card ma-1"
           v-for="announcement in announcementsList"
@@ -179,7 +192,7 @@ onMounted(async () => {
             <!-- Use optional chaining to safely access nested properties -->
             <h3>{{ announcement.teacher?.name }}</h3>
             <p>{{ truncate(announcement.announcement_desc, 100) }}</p>
-            <p class="timestamp">{{ new Date(announcement.created_at).toLocaleString() }}</p>
+            <p class="timestamp">{{ announcement.teacher?.name }}, {{ new Date(announcement.created_at).toLocaleString() }}</p>
           </div>
         </VCard>
       </VRow>
@@ -190,10 +203,10 @@ onMounted(async () => {
       max-width="600px"
     >
       <VCard>
-        <VCardTitle>{{ selectedAnnouncement.value.teacher?.name }}</VCardTitle>
+        <VCardTitle>{{ selectedAnnouncement.announcement_title || 'No title' }}</VCardTitle>
 
         <VCardText v-if="!isEditing">
-          {{ selectedAnnouncement.value.announcement_desc }}
+          {{ selectedAnnouncement.announcement_desc }}
         </VCardText>
         <VTextarea
           v-else
@@ -201,7 +214,6 @@ onMounted(async () => {
           label="Edit Announcement"
           rows="5"
         />
-
         <VCardActions>
           <VSpacer />
           <VBtn
@@ -239,6 +251,11 @@ onMounted(async () => {
         <VCard>
           <VCardTitle>Create New Announcement</VCardTitle>
           <VCardText>
+            <v-text-field
+              v-model="announcementTitle"
+              :counter="10"
+              label="Title"
+            ></v-text-field>
             <VTextarea
               v-model="newAnnouncement"
               label="Announcement Description"
@@ -274,7 +291,7 @@ onMounted(async () => {
 
 .announcement-card {
   padding: 15px;
-  width: 40%;
+  width: 49%;
 }
 
 .announcement-content h3 {
@@ -288,5 +305,11 @@ onMounted(async () => {
 .timestamp {
   font-size: 0.8em;
   color: #777;
+}
+
+@media screen and (max-width: 960px) {
+  .announcement-card {
+    width: 90%
+  }
 }
 </style>
