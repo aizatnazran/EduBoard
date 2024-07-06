@@ -186,7 +186,7 @@ const uploadFile = async () => {
 }
 
 async function fetchFiles() {
-  const { data, err } = await supabase.from('assignment').select().eq('teacher_id', teacherId);
+  const { data, err } = await supabase.from('assignment').select().eq('teacher_id', teacherId).order("created_at", { ascending: false });
   console.log(data);
   if (err) console.log('Error fetching files:', error)
   else assignments.value = data
