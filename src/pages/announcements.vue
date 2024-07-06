@@ -133,6 +133,8 @@ const saveEdit = async () => {
   } catch (error) {
     console.error('Error updating announcement:', error)
     Swal.fire('Error!', 'Could not update the announcement.', 'error')
+  } finally {
+    isEditing.value = false;
   }
 }
 
@@ -202,7 +204,7 @@ onMounted(async () => {
       persistent
       max-width="600px"
     >
-      <VCard>
+      <VCard class="pa-3">
         <VCardTitle>{{ selectedAnnouncement.announcement_title || 'No title' }}</VCardTitle>
 
         <VCardText v-if="!isEditing">
@@ -230,7 +232,7 @@ onMounted(async () => {
           </VBtn>
           <VBtn
             text
-            @click="showAnnouncementDialog = false"
+            @click="showAnnouncementDialog = false; isEditing = false"
             >Close</VBtn
           >
           <VBtn
