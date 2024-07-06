@@ -4,11 +4,46 @@ import csvImage from '@images/images/csv.png'
 import pdfImage from '@images/images/pdf.png'
 import xlsImage from '@images/images/xls.png'
 
+import loader from '@/shared/components/loader.vue'
+import axios from 'axios'
 import Swal from 'sweetalert2'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { supabase } from '../lib/supaBaseClient.js'
 
 // Components
+const endpoint = "https://kqbgvkiwwqacwnimhrvf.supabase.co/storage/v1/object/public/assignments/";
+let attachmentUrl = "";
+let isLoading = ref(false);
+let title = ref(null);
+let desc = ref(null);
+let classOptions = []; 
+let assignments = ref([]);
+const router = useRouter()
+let listing = ref(true);
+let classroom = ref(null);
+
+const fetchClasses = async () => {
+  try {
+    const { data: classes, error } = await supabase.from('class').select('id, classname')
+
+    if (error) {
+      console.error('Error fetching classes:', error)
+    } else {
+      classOptions = classes.map((el) => {
+        return {
+          title: el.classname,
+          value: el.id
+        }
+      });
+
+      console.log(classOptions);
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
 
 function getImageSrc(fileName) {
   const extension = fileName.split('.').pop()
@@ -65,10 +100,12 @@ const uploadFile = async () => {
   // Construct the new file name with uuid and original file name
   const newFileName = `${userUUID}_${originalFileName}`
   console.log('New file name for storage:', newFileName)
+  attachmentUrl = endpoint + newFileName;
 
   const filePath = `${newFileName}` // Use new file name for the path
 
   // Upload to Supabase Storage with the new file name
+  isLoading.value = true;
   const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, selectedFile.value)
 
   if (uploadError) {
@@ -81,16 +118,18 @@ const uploadFile = async () => {
         container: 'high-z-index-swal',
       },
     })
+
+    isLoading.value = false;
     return
   }
 
-  const { error: dbError } = await supabase.from('uploadfile').insert([
+  const { data, dbError } = await supabase.from('uploadfile').insert([
     {
       uploadfile_filename: originalFileName, // Keep the original file name in the database
-      uploadfile_company: teacher_id,
+      uploadfile_teacher: teacherId,
       uploadfile_uuid: userUUID,
     },
-  ])
+  ]).select();
 
   if (dbError) {
     console.error('Error saving file info to database:', dbError)
@@ -100,6 +139,31 @@ const uploadFile = async () => {
       icon: 'error',
       customClass: { container: 'high-z-index-swal' },
     })
+    isLoading.value = false;
+  }
+
+  console.log(data);
+  const { error: err } = await supabase.from('assignment').insert([
+    { // Keep the original file name in the database
+      title: title.value,
+      description: desc.value,
+      teacher_id: teacherId,
+      uploadfile_id: data[0].id,
+      class_id: classroom._value,
+      attachment_url: attachmentUrl,
+    },
+  ])
+
+  if (err) {
+    console.error('Error saving assignment info to database:', dbError)
+    Swal.fire({
+      title: 'Error!',
+      text: 'Error saving assignment info to database.',
+      icon: 'error',
+      customClass: { container: 'high-z-index-swal' },
+    })
+    isLoading.value = false;
+    return;
   }
 
   selectedFile.value = null
@@ -116,16 +180,18 @@ const uploadFile = async () => {
       container: 'high-z-index-swal',
     },
   })
+
+  const axiosResponse = await axios.post('http://118.107.204.65:3000/assignment');
+  isLoading.value = false;
 }
 
 async function fetchFiles() {
-  let { data: files, error } = await supabase
-    .from('uploadfile')
-    .select('uploadfile_filename')
-    .eq('uploadfile_teacher', teacherId)
+  const { data, err } = await supabase.from('assignment').select().eq('teacher_id', teacherId);
+  console.log(data);
+  if (err) console.log('Error fetching files:', error)
+  else assignments.value = data
 
-  if (error) console.log('Error fetching files:', error)
-  else return files
+  console.log(assignments.value);
 }
 
 const filesList = ref([])
@@ -168,36 +234,54 @@ const confirmDelete = async file => {
   })
 }
 
+const goToDetails = (id) => {
+  router.push('/assignments/details/' +  id)
+  listing.value = false;
+}
+
 onMounted(async () => {
+  fetchClasses()
   filesList.value = await fetchFiles()
+  listing.value = true;
 })
 </script>
 
 <template>
-  <VRow>
+  <loader v-if="isLoading" />
+  <router-view></router-view>
+  <VRow v-if="listing">
     <VSpacer />
     <VBtn
       color="primary"
       v-bind="props"
       @click="sheet = !sheet"
     >
-      Upload Assignment
+      Create Assignment
     </VBtn>
   </VRow>
-  <div>
+  <div v-if="listing" class="mt-5">
     <VContainer>
       <!-- Submitted Document Docs -->
-      <VRow>
+      <!-- <VRow>
         <VChip class="mb-3 mt-6">
           <p class="text-title ma-5">Uploaded Assignments</p>
         </VChip>
-      </VRow>
+      </VRow> -->
+      <v-list lines="two">
+        <v-list-item
+          v-for="item in assignments"
+          :key="item"
+          :title="item.title"
+          :subtitle="item.description"
+          @click="goToDetails(item.id)"
+        ></v-list-item>
+      </v-list>
 
-      <VRow>
+      <!-- <VRow>
         <VCard
           class="document-card ma-1"
-          v-for="file in filesList"
-          :key="file.uploadfile_filename"
+          v-for="item in assignments"
+          :key="item.id"
           cols="6"
         >
           <v-btn
@@ -214,15 +298,16 @@ onMounted(async () => {
             :src="getImageSrc(file.uploadfile_filename)"
             alt="Document Icon"
           />
+          {{ item.id }}
           <p class="file-name">{{ file.uploadfile_filename }}</p>
         </VCard>
         <div
-          v-if="filesList.length === 0"
+          v-if="assignments.length === 0"
           class="text-center my-5"
         >
           <p>No assignments uploaded yet.</p>
         </div>
-      </VRow>
+      </VRow> -->
     </VContainer>
 
     <div class="text-center">
@@ -233,29 +318,63 @@ onMounted(async () => {
         class="overlaying-component-class"
       >
         <VCard class="pa-10">
-          <VContainer
+          <!-- <VContainer
             class="pa-5 rounded-lg mt-2 border-2"
             style="background-color: var(--v-theme-on-surface); border: 2px solid #8a8d93"
-          >
+          > -->
             <!--
                 <div class="text-overline text-start ml-10">
                 File Menu :
                 </div> 
               -->
-            <div class="text-overline text-start ml-10 text-title">File Upload :</div>
-            <VFileInput
-              @change="handleFileChange"
-              z
-              counter
-              truncate-length="15"
-            />
-          </VContainer>
+              <v-form v-model="valid">
+                <v-container>
+                  <v-row>
+                    <v-col
+                      cols="12"
+                      md="6"
+                    >
+                      <v-text-field
+                        v-model="title"
+                        label="Title"
+                        hide-details
+                        required
+                      ></v-text-field>
+                    </v-col>
+
+                    <v-col
+                      cols="12"
+                      md="6"
+                    >
+                      <v-select v-model="classroom" label="Class" :items="classOptions"></v-select>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col>
+                      <v-textarea label="Description" v-model="desc"></v-textarea>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col>
+                      <div class="text-overline text-start">Attachment :</div>
+                      <div class="bg-red border border-sm rounded d-flex justify-center align-center pa-5" style="height: 100px" @change="handleFileChange">
+                        <v-file-input @change="handleFileChange" label="File input" variant="underlined"></v-file-input>
+                      </div>
+                      <!-- <VFileInput
+                        @change="handleFileChange"
+                        counter
+                        truncate-length="15"
+                      /> -->
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </v-form>
+          <!-- </VContainer> -->
           <VBtn
-            class="mt-5"
-            prepend-icon="mdi-send-variant"
+            class="mt-5 mx-10"
             @click="uploadFile"
           >
-            Upload
+            Submit
           </VBtn>
         </VCard>
       </VDialog>
