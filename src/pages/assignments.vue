@@ -314,10 +314,9 @@ onMounted(async () => {
       <VDialog
         v-model="sheet"
         activator="parent"
-        width="60%"
         class="overlaying-component-class"
       >
-        <VCard class="pa-10">
+        <VCard class="pa-md-10 pa-5 dialog">
           <!-- <VContainer
             class="pa-5 rounded-lg mt-2 border-2"
             style="background-color: var(--v-theme-on-surface); border: 2px solid #8a8d93"
@@ -425,5 +424,16 @@ onMounted(async () => {
   top: 1px;
   right: 1px;
   z-index: 10;
+}
+
+.dialog {
+    width: 60%;
+    margin: auto;
+  }
+
+@media screen and (max-width: 960px) {
+  .dialog {
+    width: 90%
+  }
 }
 </style>
