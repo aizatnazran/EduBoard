@@ -100,23 +100,37 @@ const upgradeBanner = computed(() => {
       />
       <VerticalNavLink
         :item="{
-          title: 'Students',
+          title: 'Class',
           icon: 'mdi-account-group',
+          to: '/comingsoon2',
+        }"
+      />
+      <VerticalNavLink
+        :item="{
+          title: 'Students',
+          icon: 'mdi-account',
           to: '/students',
         }"
       />
-      <!-- <VerticalNavLink
-        :item="{
-          title: 'Calendar',
-          icon: 'mdi-calendar-account',
-          to: '/comingsoon2',
-        }"
-      /> -->
       <VerticalNavLink
         :item="{
           title: 'Announcements',
           icon: 'mdi-bullhorn',
           to: '/announcements',
+        }"
+      />
+      <VerticalNavLink
+        :item="{
+          title: 'Timetable',
+          icon: 'mdi-timetable',
+          to: '/comingsoon2',
+        }"
+      />
+      <VerticalNavLink
+        :item="{
+          title: 'Result',
+          icon: 'mdi-check-outline',
+          to: '/comingsoon2',
         }"
       />
       <!--

@@ -267,12 +267,13 @@ onMounted(async () => {
           <p class="text-title ma-5">Uploaded Assignments</p>
         </VChip>
       </VRow> -->
-      <v-list lines="two">
+      <v-list lines="three">
         <v-list-item
           v-for="item in assignments"
           :key="item"
           :title="item.title"
           :subtitle="item.description"
+          class="border-b-md"
           @click="goToDetails(item.id)"
         ></v-list-item>
       </v-list>
